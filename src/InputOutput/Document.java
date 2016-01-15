@@ -1,5 +1,6 @@
 package InputOutput;
 
+
 public class Document 
 {
 	public String content;

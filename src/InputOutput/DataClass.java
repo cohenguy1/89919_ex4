@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-
 public class DataClass 
 {
 	public static String UNSEEN_WORD = "unseen-word";
@@ -140,5 +139,10 @@ public class DataClass
 
 	public void setDocsTopicList(List<Set<Topics>> docsTopicList) {
 		this.docsTopicList = docsTopicList;
+	}
+
+	public List<Document> getDocsList() 
+	{
+		return docsList;
 	}
 }

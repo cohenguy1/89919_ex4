@@ -2,16 +2,17 @@
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import InputOutput.BackOff;
 import InputOutput.DataClass;
+import InputOutput.Document;
 import InputOutput.Output;
 
 public class Ex4 
 {
-	public static long TrainingSizeWithoutBeginArticle;
+	public final static int NumOfClusters = 9;
 
 	public static void main(String[] args) 
 	{
@@ -31,7 +32,27 @@ public class Ex4
 			DataClass devData = new DataClass();
 			devData.readInputFile(devl_inputFile);
 
+			outputClass.writeOutput(devData.WordsMap.size());
+			
 			devData.removeRareWords();
+			
+			outputClass.writeOutput(devData.WordsMap.size());
+			
+			List<Cluster> clusters = new ArrayList<Cluster>();
+			
+			for (int i = 0; i < NumOfClusters; i++)
+			{
+				clusters.add(new Cluster());
+			}
+			
+			List<Document> docList = devData.getDocsList();
+			
+			outputClass.writeOutput(docList.size());
+			
+			for (int i = 0; i < docList.size(); i++)
+			{
+				clusters.get(i % NumOfClusters).AddDocument(docList.get(i));
+			}
 		}
 		catch (IOException e) 
 		{
@@ -42,7 +63,7 @@ public class Ex4
 	/*
 	 * Returns model perplexity 
 	 */
-	private static double calculatePerplexityByBackOff(double bigramLambda, Map<String, Map<String, Integer>> validationMap, long validationSizeWithoutBeginArticle) 
+	/*private static double calculatePerplexityByBackOff(double bigramLambda, Map<String, Map<String, Integer>> validationMap, long validationSizeWithoutBeginArticle) 
 	{		
 		double sumPWords = 0;
 
@@ -98,5 +119,5 @@ public class Ex4
 		// return the best lambda
 		return bestLambdaIndex/DIVIDE_LAMDA;
 	}
-
+	 */
 }

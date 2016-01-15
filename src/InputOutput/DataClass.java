@@ -45,9 +45,9 @@ public class DataClass
 
 			skipEmptyLine(bufferedReader);
 
-			String docTextLine = bufferedReader.readLine();
+			String[] docWords = bufferedReader.readLine().split(" ");
 			
-			Document doc = new Document(docTextLine);
+			Document doc = new Document(docWords);
 			docsList.add(doc);
 			
 			mapWordCount(doc);
@@ -103,10 +103,8 @@ public class DataClass
 	 * Adds each word of the line read to the word mapping 
 	 */
 	private void mapWordCount(Document doc) 
-	{
-		String[] words = doc.content.split(" ");
-		
-		for(String word : words)
+	{	
+		for(String word : doc.words)
 		{
 			AddWordToMap(WordsMap, word);
 			

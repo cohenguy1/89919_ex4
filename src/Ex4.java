@@ -53,6 +53,9 @@ public class Ex4
 			{
 				clusters.get(i % NumOfClusters).AddDocument(docList.get(i));
 			}
+			
+			EMAlgorithm emAlgorithm = new EMAlgorithm();
+			emAlgorithm.RunAlgorithm(devData, clusters);
 		}
 		catch (IOException e) 
 		{

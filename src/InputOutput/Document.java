@@ -4,13 +4,13 @@ import java.util.*;
 
 public class Document 
 {
-	public String content;
+	public String[] words;
 	
 	public Map<String, Integer> WordsMap;
 	
-	public Document(String docContent)
+	public Document(String[] docContent)
 	{
-		content = docContent;
+		words = docContent;
 		WordsMap = new TreeMap<String, Integer>();
 	}
 
@@ -18,15 +18,15 @@ public class Document
 	{
 		word = word.toLowerCase();
 
-		WordsMap.put(word, getWordOccurrences(WordsMap, word) + 1);
+		WordsMap.put(word, getWordOccurrences(word) + 1);
 	}
 	
 	/*
 	 * Gets the Total number of occurrences of word in map
 	 */
-	public static int getWordOccurrences(Map<String, Integer> map, String word)
+	public int getWordOccurrences(String word)
 	{
-		return map.get(word) == null ? 0 : map.get(word);
+		return WordsMap.get(word) == null ? 0 : WordsMap.get(word);
 	}
 	
 	public void removeWordsFromMap(List<String> wordsToRemove) 

@@ -46,10 +46,12 @@ public class DataClass
 			skipEmptyLine(bufferedReader);
 
 			String docTextLine = bufferedReader.readLine();
-			mapWordCount(docTextLine);
 			
-			docsList.add(new Document(docTextLine));
-		
+			Document doc = new Document(docTextLine);
+			docsList.add(doc);
+			
+			mapWordCount(doc);
+			
 			skipEmptyLine(bufferedReader);
 		}
 		
@@ -68,6 +70,7 @@ public class DataClass
 	public void removeRareWords()
 	{
 		Map<String, Integer> newWordsMap = new TreeMap<String, Integer>();
+		List<String> wordsToRemove = new ArrayList<String>();
 		
 		for (String word : WordsMap.keySet())
 		{
@@ -75,6 +78,15 @@ public class DataClass
 			{
 				newWordsMap.put(word, WordsMap.get(word));
 			}
+			else
+			{
+				wordsToRemove.add(word);
+			}
+		}
+		
+		for (Document doc : docsList)
+		{
+			doc.removeWordsFromMap(wordsToRemove);
 		}
 		
 		WordsMap = newWordsMap;
@@ -90,13 +102,15 @@ public class DataClass
 	/*
 	 * Adds each word of the line read to the word mapping 
 	 */
-	private void mapWordCount(String inputLine) 
+	private void mapWordCount(Document doc) 
 	{
-		String[] words = inputLine.split(" ");
+		String[] words = doc.content.split(" ");
 		
 		for(String word : words)
 		{
 			AddWordToMap(WordsMap, word);
+			
+			doc.AddWordToMap(word);
 		}
 	}
 

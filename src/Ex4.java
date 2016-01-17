@@ -12,7 +12,7 @@ import InputOutput.Output;
 
 public class Ex4 
 {
-	public final static int NumOfClusters = 9;
+	public final static int NUM_OF_CLUSTERS = 9;
 
 	public static void main(String[] args) 
 	{
@@ -40,7 +40,7 @@ public class Ex4
 			
 			List<Cluster> clusters = new ArrayList<Cluster>();
 			
-			for (int i = 0; i < NumOfClusters; i++)
+			for (int i = 0; i < NUM_OF_CLUSTERS; i++)
 			{
 				clusters.add(new Cluster());
 			}
@@ -51,7 +51,7 @@ public class Ex4
 			
 			for (int i = 0; i < docList.size(); i++)
 			{
-				clusters.get(i % NumOfClusters).AddDocument(docList.get(i));
+				clusters.get(i % NUM_OF_CLUSTERS).AddDocument(docList.get(i));
 			}
 			
 			EMAlgorithm emAlgorithm = new EMAlgorithm();

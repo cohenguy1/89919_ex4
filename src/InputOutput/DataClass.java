@@ -13,6 +13,7 @@ import java.util.TreeMap;
 
 public class DataClass 
 {
+	private static final int RAREÉ_WORD_OCCURS = 3;
 	public static String UNSEEN_WORD = "unseen-word";
 	private boolean skipLine = true;
 
@@ -38,16 +39,17 @@ public class DataClass
 		BufferedReader bufferedReader = new BufferedReader(fileReader);
 
 		String docTopicLine;
+		int countDocs=0;
 
 		while ((docTopicLine = bufferedReader.readLine()) != null) {
-
+			countDocs++;
 			docsTopicList.add(setTopicFromLine(docTopicLine));
 
 			skipEmptyLine(bufferedReader);
 
 			String[] docWords = bufferedReader.readLine().split(" ");
 			
-			Document doc = new Document(docWords);
+			Document doc = new Document(docWords,countDocs);
 			docsList.add(doc);
 			
 			mapWordCount(doc);
@@ -74,7 +76,8 @@ public class DataClass
 		
 		for (String word : WordsMap.keySet())
 		{
-			if (WordsMap.get(word) > 3)
+		
+			if (WordsMap.get(word) > RAREÉ_WORD_OCCURS)
 			{
 				newWordsMap.put(word, WordsMap.get(word));
 			}
@@ -104,7 +107,7 @@ public class DataClass
 	 */
 	private void mapWordCount(Document doc) 
 	{	
-		for(String word : doc.words)
+		for(String word : doc.words) //TODO: check if need to use doc.words or doc.WordsMap.keySet() - only the relevant words
 		{
 			AddWordToMap(WordsMap, word);
 			

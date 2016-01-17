@@ -17,4 +17,12 @@ public class Cluster
 		documents.add(document);
 	}
 
+	public boolean hasWord(String word) {
+		for (Document doc : documents){
+			if (doc.hasWord(word))
+				return true;
+		}
+		return false;
+	}
+
 }

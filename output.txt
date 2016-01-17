@@ -1,0 +1,7 @@
+#Students	Ido Cohen	Guy Cohen	203516992	304840283
+#Output1	develop.txt
+#Output2	output.txt
+#Output3	300000
+#Output4	20279
+#Output5	6800
+#Output6	2124

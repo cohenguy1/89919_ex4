@@ -8,7 +8,7 @@ public class EMAlgorithm
 	public final static int NumOfClusters = Ex4.NUM_OF_CLUSTERS;
 
 	double clustersProb[];
-	long numberOfRelevantWords; //This is the new vocablery size
+	long numberOfRelevantWords; //This is the new vocabulary size
 	List<Document> docsList; 
 
 	Map<Document, Double[]> Wti = new TreeMap<Document, Double[]>(); 
@@ -42,6 +42,9 @@ public class EMAlgorithm
 		int epoch = 0;
 		while (curr_likelihood >= prev_likelihood){
 			calcEStep(devData,clusters);
+			
+			calcMStep(devData,clusters);
+			
 		}
 
 		//		likelihood_array = []
@@ -153,6 +156,100 @@ public class EMAlgorithm
 
 	}
 
+	private void calcMStep (DataClass devData, List<Cluster> clusters) {
+		
+		double threshold = 0.000001;
+		double sumWti = 0;
+
+		Double[] denominatorI = new Double[NumOfClusters];
+		Double[] pLidstone;
+		
+		for (int i = 0; i < NumOfClusters; i++) {
+			for (Document doc : docsList) {
+				sumWti += Wti.get(doc)[i] * doc.getNumberOfRelevantWordsInDoc();
+			}
+			denominatorI[i] = sumWti;
+		}
+
+		for (String word : devData.WordsMap.keySet()) {
+			pLidstone = new Double[NumOfClusters];
+			
+			for (int i = 0; i < NumOfClusters; i++) {
+				double numerator = 0;	
+				
+				for (Document doc : docsList) {
+					if (doc.hasWord(word) && Wti.get(doc)[i] != 0) {
+						numerator += Wti.get(doc)[i] * doc.getWordOccurrences(word);
+					}
+				}
+				
+				pLidstone[i] = CalcUnigramPLidstone(numerator, denominatorI[i]); 
+			}
+			
+			Pik.put(word, pLidstone);
+		}
+		
+		for (int i = 0; i < NumOfClusters; i++) {
+			clustersProb[i] = 0;
+			
+			for (Document doc : docsList) {
+				clustersProb[i] += Wti.get(doc)[i];
+			}
+				
+			clustersProb[i] /= docsList.size();
+		}
+		
+		for (int i = 0; i < NumOfClusters; i++) {
+			if (clustersProb[i] < threshold) {
+				clustersProb[i] = threshold;
+			}
+		}
+
+		double alphaSum = 0;
+		for (int i = 0; i < NumOfClusters; i++) {
+			alphaSum += clustersProb[i];
+		}
+		
+		for (int i = 0; i < NumOfClusters; i++) {
+			clustersProb[i] /= alphaSum;
+		}
+		
+//		threshold = 0.000001
+//			    number_of_docs = len(articles_with_their_words_frequencies)
+//			    probabilities = {}
+//			    denominator = []
+//			    for i in range(0, number_of_clusters):
+//			        denom_i = 0
+//			        for t in articles_with_their_words_frequencies:
+//			            len_of_t = sum(articles_with_their_words_frequencies[t].values())
+//			            denom_i += weights[t][i] * len_of_t
+//			        denominator.append(denom_i)
+//			    for word in relevant_words_with_freq:
+//			        probabilities[word] = {}
+//			        for i in range(0, number_of_clusters):
+//			            numerator = 0
+//			            for t in articles_with_their_words_frequencies:
+//			                if word in articles_with_their_words_frequencies[t] and weights[t][i] != 0:
+//			                    numerator += weights[t][i] * articles_with_their_words_frequencies[t][word]
+//			            probabilities[word][i] = calc_lidstone_for_unigram(numerator, denominator[i], v_size, lambda_val)
+//			    # If alpha is smaller then a threshold we will scale it to the threshold to not get ln(alpha) = error
+//
+//			    alpha = [0] * number_of_clusters
+//			    for i in range(0, number_of_clusters):
+//			        for t in articles_with_their_words_frequencies:
+//			            alpha[i] += weights[t][i]
+//			        alpha[i] /= number_of_docs
+//			    # alpha = [sum(i) / number_of_docs for i in zip(*weights)]
+//			    for i in range(0, len(alpha)):
+//			        if alpha[i] < threshold:
+//			            alpha[i] = threshold
+//			    sum_of_alpha = sum(alpha)
+//			    # Normalize alpha for it to sum to 1
+//			    alpha = [x / sum_of_alpha for x in alpha]
+//			    return alpha, probabilities
+
+	}
+	
 	/**
 	 * Initialize Pik - the probability for each word Wk to be in cluster i
 	 * @param wordsMap
@@ -222,7 +319,14 @@ public class EMAlgorithm
 		return clusterProbForDoc;
 
 	}
+	
 	public double CalcUnigramPLidstone(long totalWordordOccurences, long trainSize) {
+		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
+		return (totalWordordOccurences + lidstonLambda)
+				/ (trainSize + lidstonLambda * numberOfRelevantWords);
+	}
+	
+	public double CalcUnigramPLidstone(Double totalWordordOccurences, Double trainSize) {
 		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
 		return (totalWordordOccurences + lidstonLambda)
 				/ (trainSize + lidstonLambda * numberOfRelevantWords);

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class DataClass 
 {
@@ -40,16 +41,19 @@ public class DataClass
 
 		String docTopicLine;
 		int countDocs=0;
+		Set<Topics> topics;
 
 		while ((docTopicLine = bufferedReader.readLine()) != null) {
 			countDocs++;
-			docsTopicList.add(setTopicFromLine(docTopicLine));
+			
+			topics = setTopicFromLine(docTopicLine);
+			docsTopicList.add(topics);
 
 			skipEmptyLine(bufferedReader);
 
 			String[] docWords = bufferedReader.readLine().split(" ");
 			
-			Document doc = new Document(docWords,countDocs);
+			Document doc = new Document(docWords,countDocs,topics);
 			docsList.add(doc);
 			
 			mapWordCount(doc);
@@ -96,9 +100,17 @@ public class DataClass
 	}
 
 	private Set<Topics> setTopicFromLine(String docTopicLine) {
-		// TODO Change in EX4
+		
+		Set<Topics> topics = new TreeSet<Topics>();
+		Topics topic;
+		String[] lineNoTrainHeader = docTopicLine.replace("<TRAIN	", "").replace(">", "").split("\t");
+		for (int i=1; i<lineNoTrainHeader.length; i++){
+			topic = Topics.fromString(lineNoTrainHeader[i]); 
+			topics.add(topic);
+		}
 		Output.writeConsoleWhenTrue(docTopicLine);
-		return null;
+		Output.writeConsoleWhenTrue(topics);
+		return topics;
 
 	}
 

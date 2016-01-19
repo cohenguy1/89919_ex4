@@ -2,6 +2,7 @@ import java.util.*;
 
 import InputOutput.DataClass;
 import InputOutput.Document;
+import InputOutput.Topics;
 
 public class EMAlgorithm 
 {
@@ -10,6 +11,7 @@ public class EMAlgorithm
 	double clustersProb[];
 	long numberOfRelevantWords; //This is the new vocabulary size
 	List<Document> docsList; 
+	List<Set<Topics>> docsTopicList;
 
 	Map<Document, Double[]> Wti = new TreeMap<Document, Double[]>(); 
 	Map<Document, Double[]> Zti = new TreeMap<Document, Double[]>(); 
@@ -19,7 +21,8 @@ public class EMAlgorithm
 
 	//ASUMING:
 	private double lidstonLambda = 1.1;
-	private double paramK = 10; 
+	private double paramK = 10;
+	private double threshold = 0.000001;
 
 
 	public EMAlgorithm()
@@ -32,47 +35,197 @@ public class EMAlgorithm
 	{
 		docsList = devData.getDocsList(); 
 		numberOfRelevantWords = devData.WordsMap.size();
+		docsTopicList = devData.getDocsTopicList();
 
 		InitialEStep(devData.WordsMap, clusters, devData.getDocsList().size());
 
-		//		likelihood_array = []
-		//	    perplexity_array = []
-		double prev_likelihood = -10000001;
-		double curr_likelihood = -10000000;
-		int epoch = 0;
-		while (curr_likelihood >= prev_likelihood){
+		double lastLikelihood = Double.NEGATIVE_INFINITY;
+		double likelihood = Double.NEGATIVE_INFINITY;
+		List<Double> likelihoodList = new ArrayList<Double>();
+		double perplexity = 0;
+		List<Double> perplexityList = new ArrayList<Double>();
+
+		while (lastLikelihood <= likelihood){
 			calcEStep(devData,clusters);
-			
+
 			calcMStep(devData,clusters);
-			
+
+			lastLikelihood = likelihood;
+			likelihood = calcLikelihood();
+			likelihoodList.add(likelihood);
+			System.out.println("Likelihood- " + likelihood);
+
+			perplexity = calcPerplexity(likelihood);
+			perplexityList.add(perplexity);
+			System.out.println("Perplexity- " + perplexity);
 		}
 
-		//		likelihood_array = []
-		//			    perplexity_array = []
-		//			    prev_likelihood = -10000001
-		//			    curr_likelihood = -10000000
-		//			    epoch = 0
-		//			    while curr_likelihood >= prev_likelihood:
-		//			        w, z_list, m_list = e_step(all_words_with_all_freq, articles_with_their_words_freqs, alpha, probabilities,
-		//			                                   number_of_clusters, k_param)
-		//			        alpha, probabilities = m_step(w, articles_with_their_words_freqs, all_words_with_all_freq, number_of_clusters,
-		//			                                      lambda_val, v_size, words_clusters)
-		//			        prev_likelihood = curr_likelihood
-		//			        curr_likelihood = calc_likelihood(m_list, z_list, k_param)
-		//			        curr_perplexity = calc_perplexity(curr_likelihood, v_size)
-		//			        print "likelihood per curr epoch (", epoch, ") - ", curr_likelihood
-		//			        likelihood_array.append(curr_likelihood)
-		//			        perplexity_array.append(curr_perplexity)
-		//			        epoch += 1
-		//			    plot_graph(epoch, likelihood_array, "likelihood")
-		//			    plot_graph(epoch, perplexity_array, "perplexity")
-		//			    return w
+		System.out.println("All Likelihood- " + likelihoodList);
+		System.out.println("AllPerplexity- " + perplexityList);
+
+		Integer[][] confusionMatrix = calcConfusionMatrix();
+
+
+	}
+
+	private Integer[][] calcConfusionMatrix() {
+
+		Map<Integer,List<Document>> docsInCluster = new TreeMap<Integer,List<Document>>();
+
+		//Find Cluster of each document
+		int maxCluster;
+		for (Document doc : docsList){
+			Double maxWt = Wti.get(doc)[0];
+			maxCluster = 0;
+			for (int i=1; i<NumOfClusters; i++){
+				Double wti = Wti.get(doc)[i];
+				if (wti > maxWt){
+					maxWt = wti;
+					maxCluster = i;
+				}
+			}
+			if (docsInCluster.get(maxCluster) == null){
+				docsInCluster.put(maxCluster, new ArrayList<Document>());
+			}
+			docsInCluster.get(maxCluster).add(doc);
+		}
+
+		//Calculate Confusion Matrix
+		Integer[][] confustionMatrix = new Integer[NumOfClusters][Topics.getNumberOfTopcis()+1];
+		for (int i=0; i<NumOfClusters; i++){
+			int j=0;
+			for(Topics topic : Topics.values()){
+				confustionMatrix[i][j]=0;
+				if (docsInCluster.get(i) != null){
+					for(Document doc : docsInCluster.get(i)){
+						if(doc.getTopics().contains(topic)){
+							confustionMatrix[i][j] += 1;
+						}
+					}
+				}
+				j++;
+			}
+			confustionMatrix[i][j] = docsInCluster.get(i).size(); //add number of documents in cluster in the last column
+		}
+
+		//Find main topic in each cluster
+		List<Topics> mainClusterTopic = new ArrayList<Topics>();
+		for (int i=0; i<NumOfClusters; i++){
+			int j=0;
+			Topics mainTopic = null;
+			Integer mainTopicAmount = 0;
+			for(Topics topic : Topics.values()){
+				if (confustionMatrix[i][j] > mainTopicAmount){
+					mainTopicAmount = confustionMatrix[i][j];
+					mainTopic = topic;
+				}
+				j++;
+			}
+			mainClusterTopic.add(mainTopic);
+		}
+
+		System.out.println("Main Topics- " + mainClusterTopic);
+
+		return confustionMatrix;
+
+		//		clusters_with_topics = {}
+		//	    for row in range(0, number_of_clusters):
+		//	        dominant_topic = 0
+		//	        dominant_topic_val = 0
+		//	        for col in range(0, number_of_topics):
+		//	            if conf_matrix[row][col] > dominant_topic_val:
+		//	                dominant_topic = topics_list[col]
+		//	                dominant_topic_val = conf_matrix[row][col]
+		//	        clusters_with_topics[row] = dominant_topic
+
+
+		//	    documents_in_clusters = {}
+		//
+		//	    number_of_topics = len(topics_list)
+		//	    number_of_clusters = len(weights[0].keys())
+		//
+		//	    # Set each cluster with it's corresponding cluster by wti
+		//	    for t in articles_with_their_words_freqs:
+		//	        max_weights = weights[t][0]
+		//	        selected_index = 0
+		//	        for i in range(0, number_of_clusters):
+		//	            if weights[t][i] > max_weights:
+		//	                max_weights = weights[t][i]
+		//	                selected_index = i
+		//	        if selected_index not in documents_in_clusters:
+		//	            documents_in_clusters[selected_index] = []
+		//	        documents_in_clusters[selected_index].append(t)
+		//
+		//	    #Create the confusion matrix
+		//	    conf_matrix = np.zeros((number_of_clusters, number_of_topics + 1))
+		//	    for row in range(0, number_of_clusters):
+		//	        for col in range(0, number_of_topics):
+		//	            current_topic = topics_list[col]
+		//	            for t in documents_in_clusters[row]:
+		//	                if current_topic in article_topics[t]:
+		//	                    conf_matrix[row][col] += 1
+		//	        # Number of articles in the cluster
+		//	        conf_matrix[row][number_of_topics] = len(documents_in_clusters[row])
+		//
+		//	    clusters_with_topics = {}
+		//	    for row in range(0, number_of_clusters):
+		//	        dominant_topic = 0
+		//	        dominant_topic_val = 0
+		//	        for col in range(0, number_of_topics):
+		//	            if conf_matrix[row][col] > dominant_topic_val:
+		//	                dominant_topic = topics_list[col]
+		//	                dominant_topic_val = conf_matrix[row][col]
+		//	        clusters_with_topics[row] = dominant_topic
+		//
+		//	    return conf_matrix, clusters_with_topics, documents_in_clusters
+
+	}
+
+	private double calcPerplexity(double likelihood) {
+		return Math.pow(2, -1/numberOfRelevantWords * likelihood); //TODO: check if right. or do we need mean perplexity?
+	}
+
+	private double calcLikelihood() {
+		double likelihood = 0;
+		double sumZt = 0;
+		double maxZt = 0;
+		double newZti = 0;
+		for (Document doc : Mt.keySet()){
+			sumZt = 0;
+			maxZt = Mt.get(doc);
+			if (Zti.get(doc) != null){
+				for (Double zti: Zti.get(doc)){
+					newZti = zti - maxZt;
+					if (-1*paramK <= newZti ){
+						sumZt += Math.exp(newZti);
+					}
+				}
+			}
+			if (sumZt==0){
+				System.out.println("DEBUG- sumZt is zero"); //TODO: delete
+			}
+			likelihood += maxZt + Math.log(sumZt);			
+		}
+
+		return likelihood;
+
+		//		len_of_m_list = len(m_list)
+		//	    likelihood = 0
+		//	    for t in range(len_of_m_list):
+		//	        sum_zi_e = 0
+		//	        curr_zi_len = len(z_list[t])
+		//	        for i in range(0, curr_zi_len):
+		//	            curr_zi_m = z_list[t][i] - m_list[t]
+		//	            if curr_zi_m >= (-1.0) * k_param:
+		//	                sum_zi_e += math.exp(curr_zi_m)
+		//	        likelihood += m_list[t] + np.log(sum_zi_e)
+		//	    return likelihood
 	}
 
 	private void calcEStep(DataClass devData, List<Cluster> clusters) {
-//		int count=0;
+		//		int count=0;
 		for (Document doc : docsList ){
-//			count++;
+			//			count++;
 			Double[] Zi = calcZti(devData.WordsMap,doc); 
 			double maxZ = getMaxZ(Zi);
 			Zti.put(doc, Zi);
@@ -100,7 +253,7 @@ public class EMAlgorithm
 
 			Wti.put(doc, clusterProbForDoc);
 		}
-		
+
 		//	    for t, doc_with_freq in articles_with_their_words_freqs.iteritems():
 		//	        w[t] = {}
 		//	        curr_z, max_zi = calc_z_values(all_relevant_words, number_of_clusters, alpha, probabilities, doc_with_freq, k_param)
@@ -121,7 +274,7 @@ public class EMAlgorithm
 	}
 
 	private double getMaxZ(Double[] Zi) {
-		double maxZ=Double.MIN_VALUE;
+		double maxZ=Double.NEGATIVE_INFINITY;
 		for (double zti : Zi){
 			if (zti>maxZ){
 				maxZ = zti;
@@ -157,13 +310,12 @@ public class EMAlgorithm
 	}
 
 	private void calcMStep (DataClass devData, List<Cluster> clusters) {
-		
-		double threshold = 0.000001;
+
 		double sumWti = 0;
 
 		Double[] denominatorI = new Double[NumOfClusters];
 		Double[] pLidstone;
-		
+
 		for (int i = 0; i < NumOfClusters; i++) {
 			for (Document doc : docsList) {
 				sumWti += Wti.get(doc)[i] * doc.getNumberOfRelevantWordsInDoc();
@@ -173,32 +325,32 @@ public class EMAlgorithm
 
 		for (String word : devData.WordsMap.keySet()) {
 			pLidstone = new Double[NumOfClusters];
-			
+
 			for (int i = 0; i < NumOfClusters; i++) {
 				double numerator = 0;	
-				
+
 				for (Document doc : docsList) {
 					if (doc.hasWord(word) && Wti.get(doc)[i] != 0) {
 						numerator += Wti.get(doc)[i] * doc.getWordOccurrences(word);
 					}
 				}
-				
+
 				pLidstone[i] = CalcUnigramPLidstone(numerator, denominatorI[i]); 
 			}
-			
+
 			Pik.put(word, pLidstone);
 		}
-		
+
 		for (int i = 0; i < NumOfClusters; i++) {
 			clustersProb[i] = 0;
-			
+
 			for (Document doc : docsList) {
 				clustersProb[i] += Wti.get(doc)[i];
 			}
-				
+
 			clustersProb[i] /= docsList.size();
 		}
-		
+
 		for (int i = 0; i < NumOfClusters; i++) {
 			if (clustersProb[i] < threshold) {
 				clustersProb[i] = threshold;
@@ -209,47 +361,47 @@ public class EMAlgorithm
 		for (int i = 0; i < NumOfClusters; i++) {
 			alphaSum += clustersProb[i];
 		}
-		
+
 		for (int i = 0; i < NumOfClusters; i++) {
 			clustersProb[i] /= alphaSum;
 		}
-		
-//		threshold = 0.000001
-//			    number_of_docs = len(articles_with_their_words_frequencies)
-//			    probabilities = {}
-//			    denominator = []
-//			    for i in range(0, number_of_clusters):
-//			        denom_i = 0
-//			        for t in articles_with_their_words_frequencies:
-//			            len_of_t = sum(articles_with_their_words_frequencies[t].values())
-//			            denom_i += weights[t][i] * len_of_t
-//			        denominator.append(denom_i)
-//			    for word in relevant_words_with_freq:
-//			        probabilities[word] = {}
-//			        for i in range(0, number_of_clusters):
-//			            numerator = 0
-//			            for t in articles_with_their_words_frequencies:
-//			                if word in articles_with_their_words_frequencies[t] and weights[t][i] != 0:
-//			                    numerator += weights[t][i] * articles_with_their_words_frequencies[t][word]
-//			            probabilities[word][i] = calc_lidstone_for_unigram(numerator, denominator[i], v_size, lambda_val)
-//			    # If alpha is smaller then a threshold we will scale it to the threshold to not get ln(alpha) = error
-//
-//			    alpha = [0] * number_of_clusters
-//			    for i in range(0, number_of_clusters):
-//			        for t in articles_with_their_words_frequencies:
-//			            alpha[i] += weights[t][i]
-//			        alpha[i] /= number_of_docs
-//			    # alpha = [sum(i) / number_of_docs for i in zip(*weights)]
-//			    for i in range(0, len(alpha)):
-//			        if alpha[i] < threshold:
-//			            alpha[i] = threshold
-//			    sum_of_alpha = sum(alpha)
-//			    # Normalize alpha for it to sum to 1
-//			    alpha = [x / sum_of_alpha for x in alpha]
-//			    return alpha, probabilities
+
+		//		threshold = 0.000001
+		//			    number_of_docs = len(articles_with_their_words_frequencies)
+		//			    probabilities = {}
+		//			    denominator = []
+		//			    for i in range(0, number_of_clusters):
+		//			        denom_i = 0
+		//			        for t in articles_with_their_words_frequencies:
+		//			            len_of_t = sum(articles_with_their_words_frequencies[t].values())
+		//			            denom_i += weights[t][i] * len_of_t
+		//			        denominator.append(denom_i)
+		//			    for word in relevant_words_with_freq:
+		//			        probabilities[word] = {}
+		//			        for i in range(0, number_of_clusters):
+		//			            numerator = 0
+		//			            for t in articles_with_their_words_frequencies:
+		//			                if word in articles_with_their_words_frequencies[t] and weights[t][i] != 0:
+		//			                    numerator += weights[t][i] * articles_with_their_words_frequencies[t][word]
+		//			            probabilities[word][i] = calc_lidstone_for_unigram(numerator, denominator[i], v_size, lambda_val)
+		//			    # If alpha is smaller then a threshold we will scale it to the threshold to not get ln(alpha) = error
+		//
+		//			    alpha = [0] * number_of_clusters
+		//			    for i in range(0, number_of_clusters):
+		//			        for t in articles_with_their_words_frequencies:
+		//			            alpha[i] += weights[t][i]
+		//			        alpha[i] /= number_of_docs
+		//			    # alpha = [sum(i) / number_of_docs for i in zip(*weights)]
+		//			    for i in range(0, len(alpha)):
+		//			        if alpha[i] < threshold:
+		//			            alpha[i] = threshold
+		//			    sum_of_alpha = sum(alpha)
+		//			    # Normalize alpha for it to sum to 1
+		//			    alpha = [x / sum_of_alpha for x in alpha]
+		//			    return alpha, probabilities
 
 	}
-	
+
 	/**
 	 * Initialize Pik - the probability for each word Wk to be in cluster i
 	 * @param wordsMap
@@ -319,13 +471,13 @@ public class EMAlgorithm
 		return clusterProbForDoc;
 
 	}
-	
+
 	public double CalcUnigramPLidstone(long totalWordordOccurences, long trainSize) {
 		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
 		return (totalWordordOccurences + lidstonLambda)
 				/ (trainSize + lidstonLambda * numberOfRelevantWords);
 	}
-	
+
 	public double CalcUnigramPLidstone(Double totalWordordOccurences, Double trainSize) {
 		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
 		return (totalWordordOccurences + lidstonLambda)

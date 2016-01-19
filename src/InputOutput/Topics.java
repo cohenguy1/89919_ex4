@@ -21,6 +21,10 @@ public enum Topics {
 	public String getText() {
 		return this.text;
 	}
+	
+	public static int getNumberOfTopcis() {
+		return 9; //Change if topic is added!
+	}
 
 	public static Topics fromString(String text) {
 		if (text != null) {

@@ -23,6 +23,7 @@ public class EMAlgorithm
 	private double lidstonLambda = 1.1;
 	private double paramK = 10;
 	private double threshold = 0.000001;
+	private double stopThreshold = 10;
 
 
 	public EMAlgorithm()
@@ -38,14 +39,15 @@ public class EMAlgorithm
 		docsTopicList = devData.getDocsTopicList();
 
 		InitialEStep(devData.WordsMap, clusters, devData.getDocsList().size());
-
-		double lastLikelihood = Double.NEGATIVE_INFINITY;
-		double likelihood = Double.NEGATIVE_INFINITY;
+		calcMStep(devData,clusters);
+		
+		double lastLikelihood = -999999999;
+		double likelihood = Double.NEGATIVE_INFINITY+2*stopThreshold;
 		List<Double> likelihoodList = new ArrayList<Double>();
 		double perplexity = 0;
 		List<Double> perplexityList = new ArrayList<Double>();
 
-		while (lastLikelihood <= likelihood){
+		while (likelihood- lastLikelihood > stopThreshold ){
 			calcEStep(devData,clusters);
 
 			calcMStep(devData,clusters);
@@ -61,7 +63,7 @@ public class EMAlgorithm
 		}
 
 		System.out.println("All Likelihood- " + likelihoodList);
-		System.out.println("AllPerplexity- " + perplexityList);
+		System.out.println("All Perplexity- " + perplexityList);
 
 		Integer[][] confusionMatrix = calcConfusionMatrix();
 
@@ -318,6 +320,9 @@ public class EMAlgorithm
 
 		for (int i = 0; i < NumOfClusters; i++) {
 			for (Document doc : docsList) {
+				if (Wti.get(doc) == null){
+					System.out.println("print");
+				}
 				sumWti += Wti.get(doc)[i] * doc.getNumberOfRelevantWordsInDoc();
 			}
 			denominatorI[i] = sumWti;
@@ -410,73 +415,83 @@ public class EMAlgorithm
 	 */
 	private void InitialEStep(Map<String, Integer> wordsMap, List<Cluster> clusters, int numberOfDocs) {
 
-		//Init Ai
-		InitialClustersProb(clusters, numberOfDocs);
-
-		//Init Pik
-		for (String word : wordsMap.keySet())
-		{			
-			boolean[] isWordInCluster = isWordInClusters(clusters,word);
-
-			//for every doc t - has a list of probabilities (for each cluster i))
-			Pik.put(word, InitialPikWithLidstone(isWordInCluster));
-		}
-
-	}
-
-	/**
-	 * Check for each cluster if the word occurs in it
-	 * @param clusters
-	 * @param word
-	 * @return
-	 */
-	private boolean[] isWordInClusters(List<Cluster> clusters, String word) {
-		boolean[] isWordInCluster = new boolean[NumOfClusters];
-		for (int i = 0; i < NumOfClusters; i++)
-		{				
-			isWordInCluster[i] = clusters.get(i).hasWord(word); 
-		}
-
-		return isWordInCluster;
-	}
-
-	/**
-	 * Smooth Pik with lidstone - using the number of clusturs the word occurs in
-	 * ASUMING: we can pick any way to initialize them, and this works.
-	 * @param isWordInCluster
-	 * @return
-	 */
-	private Double[] InitialPikWithLidstone(boolean[] isWordInCluster) {		
-		Double[] clusterProbForDoc = new Double[NumOfClusters];
-
-		//count in how many clusters the word oocurs
-		int numberOfClustersWithWord=0;
-		for (boolean isInCluster : isWordInCluster){
-			if (isInCluster){
-				numberOfClustersWithWord++;
-			}		
-		}
-
-		for (int i = 0; i < NumOfClusters; i++)
-		{		
-			if(isWordInCluster[i]){
-				clusterProbForDoc[i] = CalcUnigramPLidstone(numberOfClustersWithWord , NumOfClusters);
+		for (int i=0; i<NumOfClusters; i++){
+			for (Document doc : clusters.get(i).getDocuments()){
+				Double[] clusterProbForDoc = new Double[NumOfClusters];
+				for(int j=0; j<NumOfClusters; j++){
+					clusterProbForDoc[j] = (i==j ? 1.0 : 0.0);
+				}				
+				Wti.put(doc, clusterProbForDoc);
 			}
-			else{
-				clusterProbForDoc[i] = CalcUnigramPLidstone(NumOfClusters-numberOfClustersWithWord , NumOfClusters); 
-			}
-
 		}
 
-		return clusterProbForDoc;
+		//		//Init Ai
+		//		InitialClustersProb(clusters, numberOfDocs);
+		//
+		//		//Init Pik
+		//		for (String word : wordsMap.keySet())
+		//		{			
+		//			boolean[] isWordInCluster = isWordInClusters(clusters,word);
+		//
+		//			//for every doc t - has a list of probabilities (for each cluster i))
+		//			Pik.put(word, InitialPikWithLidstone(isWordInCluster));
+		//		}
 
 	}
 
-	public double CalcUnigramPLidstone(long totalWordordOccurences, long trainSize) {
-		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
-		return (totalWordordOccurences + lidstonLambda)
-				/ (trainSize + lidstonLambda * numberOfRelevantWords);
-	}
+//	/**
+//	 * Check for each cluster if the word occurs in it
+//	 * @param clusters
+//	 * @param word
+//	 * @return
+//	 */
+//	private boolean[] isWordInClusters(List<Cluster> clusters, String word) {
+//		boolean[] isWordInCluster = new boolean[NumOfClusters];
+//		for (int i = 0; i < NumOfClusters; i++)
+//		{				
+//			isWordInCluster[i] = clusters.get(i).hasWord(word); 
+//		}
+//
+//		return isWordInCluster;
+//	}
+
+//	/**
+//	 * Smooth Pik with lidstone - using the number of clusturs the word occurs in
+//	 * ASUMING: we can pick any way to initialize them, and this works.
+//	 * @param isWordInCluster
+//	 * @return
+//	 */
+//	private Double[] InitialPikWithLidstone(boolean[] isWordInCluster) {		
+//		Double[] clusterProbForDoc = new Double[NumOfClusters];
+//
+//		//count in how many clusters the word oocurs
+//		int numberOfClustersWithWord=0;
+//		for (boolean isInCluster : isWordInCluster){
+//			if (isInCluster){
+//				numberOfClustersWithWord++;
+//			}		
+//		}
+//
+//		for (int i = 0; i < NumOfClusters; i++)
+//		{		
+//			if(isWordInCluster[i]){
+//				clusterProbForDoc[i] = CalcUnigramPLidstone(numberOfClustersWithWord , NumOfClusters);
+//			}
+//			else{
+//				clusterProbForDoc[i] = CalcUnigramPLidstone(NumOfClusters-numberOfClustersWithWord , NumOfClusters); 
+//			}
+//
+//		}
+//
+//		return clusterProbForDoc;
+//
+//	}
+
+//	public double CalcUnigramPLidstone(long totalWordordOccurences, long trainSize) {
+//		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
+//		return (totalWordordOccurences + lidstonLambda)
+//				/ (trainSize + lidstonLambda * numberOfRelevantWords);
+//	}
 
 	public double CalcUnigramPLidstone(Double totalWordordOccurences, Double trainSize) {
 		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
@@ -484,89 +499,89 @@ public class EMAlgorithm
 				/ (trainSize + lidstonLambda * numberOfRelevantWords);
 	}
 
-	/**
-	 * Calculates Ai (ASUMING: using initial Wti=1/NumOfClusters - uniform probability)  
-	 * @param clusters
-	 * @param docsListSize
-	 */
-	private void InitialClustersProb(List<Cluster> clusters, int docsListSize)
-	{
-		for (int i = 0; i < NumOfClusters; i++)
-		{
-			clustersProb[i] = clusters.get(i).documents.size() / (double)docsListSize;
-		}
-	}
+//	/**
+//	 * Calculates Ai (ASUMING: using initial Wti=1/NumOfClusters - uniform probability)  
+//	 * @param clusters
+//	 * @param docsListSize
+//	 */
+//	private void InitialClustersProb(List<Cluster> clusters, int docsListSize)
+//	{
+//		for (int i = 0; i < NumOfClusters; i++)
+//		{
+//			clustersProb[i] = clusters.get(i).documents.size() / (double)docsListSize;
+//		}
+//	}
+//
+//	private double GetClassificationProb(Document doc, List<Cluster> clusters, int clusterIndex)
+//	{
+//		double numerator_prob = GetProbByCluster(doc, clusters, clusterIndex);
+//		double denominator_prob = GetProbForAllClusters(doc, clusters);
+//
+//		return numerator_prob / denominator_prob;
+//	}
+//
+//	/**
+//	 * Calculate sigma(Pik^Ntk) for doc t
+//	 * @param doc
+//	 * @param clusters
+//	 * @param clusterIndex
+//	 * @return
+//	 */
+//	private double GetProbByCluster(Document doc, List<Cluster> clusters, int clusterIndex)
+//	{
+//		double prob1 = 1;
+//
+//		for (String word : doc.WordsMap.keySet())
+//		{
+//			double probForWordInCluster = GetNumOfOccursInCluster(clusterIndex, clusters, word);
+//			if (probForWordInCluster > 0)
+//			{
+//				prob1 *= Math.pow(probForWordInCluster,doc.WordsMap.get(word));
+//			}
+//		}
+//
+//		return clustersProb[clusterIndex] * prob1;
+//	}
 
-	private double GetClassificationProb(Document doc, List<Cluster> clusters, int clusterIndex)
-	{
-		double numerator_prob = GetProbByCluster(doc, clusters, clusterIndex);
-		double denominator_prob = GetProbForAllClusters(doc, clusters);
-
-		return numerator_prob / denominator_prob;
-	}
-
-	/**
-	 * Calculate sigma(Pik^Ntk) for doc t
-	 * @param doc
-	 * @param clusters
-	 * @param clusterIndex
-	 * @return
-	 */
-	private double GetProbByCluster(Document doc, List<Cluster> clusters, int clusterIndex)
-	{
-		double prob1 = 1;
-
-		for (String word : doc.WordsMap.keySet())
-		{
-			double probForWordInCluster = GetNumOfOccursInCluster(clusterIndex, clusters, word);
-			if (probForWordInCluster > 0)
-			{
-				prob1 *= Math.pow(probForWordInCluster,doc.WordsMap.get(word));
-			}
-		}
-
-		return clustersProb[clusterIndex] * prob1;
-	}
-
-	private double GetProbForAllClusters(Document doc, List<Cluster> clusters)
-	{	
-		double prob2 = 0;
-
-		for (int clusterIndex = 0; clusterIndex < NumOfClusters; clusterIndex++)
-		{
-			double prob1 = GetProbByCluster(doc, clusters, clusterIndex);
-			prob2 = clustersProb[clusterIndex] * prob1;
-		}
-
-		return prob2;
-	}
+//	private double GetProbForAllClusters(Document doc, List<Cluster> clusters)
+//	{	
+//		double prob2 = 0;
+//
+//		for (int clusterIndex = 0; clusterIndex < NumOfClusters; clusterIndex++)
+//		{
+//			double prob1 = GetProbByCluster(doc, clusters, clusterIndex);
+//			prob2 = clustersProb[clusterIndex] * prob1;
+//		}
+//
+//		return prob2;
+//	}
 
 
-	/**
-	 * Calculate Pik for cluster i and word k
-	 * ASUMING: using initial Wti=1/NumOfClusters - uniform probability, so they don't change Pik
-	 * ASUMING: Pik is calculates only by the documents in the cluster. //TODO:check if right
-	 * @param cluster
-	 * @param word
-	 * @return
-	 */
-	private double GetNumOfOccursInCluster(Cluster cluster, String word) 
-	{
-		int totalWordCountInClusterDocuments = 0;
-		int wordCountInClusterDocuments = 0;
+//	/**
+//	 * Calculate Pik for cluster i and word k
+//	 * ASUMING: using initial Wti=1/NumOfClusters - uniform probability, so they don't change Pik
+//	 * ASUMING: Pik is calculates only by the documents in the cluster. //TODO:check if right
+//	 * @param cluster
+//	 * @param word
+//	 * @return
+//	 */
+//	private double GetNumOfOccursInCluster(Cluster cluster, String word) 
+//	{
+//		int totalWordCountInClusterDocuments = 0;
+//		int wordCountInClusterDocuments = 0;
+//
+//		for (Document doc : cluster.documents)
+//		{
+//			wordCountInClusterDocuments += doc.getWordOccurrences(word);
+//			totalWordCountInClusterDocuments += doc.getNumberOfRelevantWordsInDoc();
+//		}
+//
+//		return wordCountInClusterDocuments / (double)totalWordCountInClusterDocuments;
+//	}
 
-		for (Document doc : cluster.documents)
-		{
-			wordCountInClusterDocuments += doc.getWordOccurrences(word);
-			totalWordCountInClusterDocuments += doc.getNumberOfRelevantWordsInDoc();
-		}
-
-		return wordCountInClusterDocuments / (double)totalWordCountInClusterDocuments;
-	}
-
-	private double GetNumOfOccursInCluster(int i, List<Cluster> clusters, String word) 
-	{
-		Cluster cluster = clusters.get(i);
-		return GetNumOfOccursInCluster(cluster, word);
-	}
+//	private double GetNumOfOccursInCluster(int i, List<Cluster> clusters, String word) 
+//	{
+//		Cluster cluster = clusters.get(i);
+//		return GetNumOfOccursInCluster(cluster, word);
+//	}
 }

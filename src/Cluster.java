@@ -12,6 +12,10 @@ public class Cluster
 		documents = new ArrayList<Document>();
 	}
 	
+	public List<Document> getDocuments() {
+		return documents;
+	}
+	
 	public void AddDocument(Document document) 
 	{
 		documents.add(document);

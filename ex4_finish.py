@@ -1,4 +1,3 @@
-# Katia Huri	Evyatar Iluz	307344861	26540690 #
 from __future__ import division
 import numpy as np
 import sys
@@ -8,13 +7,8 @@ import time
 import matplotlib.pyplot as plt
 
 
-# def main(argv):
-def main(dev_file, topics):
-    # ex3_process(argv[1], argv[2], argv[3],argv[4], argv[5])
-    start = time.time()
-    ex3_process(dev_file, topics)
-    end = time.time()
-    print (end - start) / 60, " minutes"
+def main(argv):
+    ex3_process(argv[1], argv[2])
 
 
 def assign_classifications_to_docs(clusters_with_topics,documents_in_clusters):
@@ -27,15 +21,15 @@ def assign_classifications_to_docs(clusters_with_topics,documents_in_clusters):
 
 
 def ex3_process(articles_file, topics):
-    # lang_voc_size = 300000
-    #  The vocabulary size that was given in the assignment
-    # initialize_train_data(articles_file)
     headers_train_data, articles_train_data, all_words_with_all_freqs, articles_with_their_words_freqs = create_train_data(
             articles_file)
     topics_list = get_topics(topics)
     words_clusters = split_into_clusters(articles_train_data)
 
+    # Run the em algorithm to find the best wti for all docs according to the train data with the specific parameters
+    # we gave
     final_weights = em_process(articles_with_their_words_freqs, all_words_with_all_freqs, words_clusters, len(topics_list))
+    #Create the conf matrix from the best weights
     conf_matrix, clusters_with_topics, documents_in_clusters = create_confusion_matrix(final_weights, articles_with_their_words_freqs,topics_list, headers_train_data)
     print conf_matrix
     docs_with_classification = assign_classifications_to_docs(clusters_with_topics,documents_in_clusters)
@@ -62,7 +56,7 @@ def create_confusion_matrix(weights, articles_with_their_words_freqs,topics_list
             documents_in_clusters[selected_index] = []
         documents_in_clusters[selected_index].append(t)
 
-    #Create the confusion matrix
+    # Create the confusion matrix
     conf_matrix = np.zeros((number_of_clusters, number_of_topics + 1))
     for row in range(0, number_of_clusters):
         for col in range(0, number_of_topics):
@@ -89,7 +83,7 @@ def create_confusion_matrix(weights, articles_with_their_words_freqs,topics_list
 
 
 def calc_likelihood(m_list, z_list, k_param):
-    print('likelihood')
+    #print('likelihood')
     len_of_m_list = len(m_list)
     likelihood = 0
     for t in range(len_of_m_list):
@@ -105,71 +99,75 @@ def calc_likelihood(m_list, z_list, k_param):
 
 def calc_initial_alpha_and_prob(relevant_words_with_freqs, articles_with_their_freq, clusters_of_articles, number_of_clusters,
                                 voc_size, lambda_val):
-    alpha = [0] * number_of_clusters
-    number_of_articles = len(articles_with_their_freq)
-    for i in range(0, number_of_clusters):
-        number_of_articles_in_i = len(clusters_of_articles[i + 1])
-        alpha[i] = number_of_articles_in_i / number_of_articles
 
-    probabilities = {}
-    for word in relevant_words_with_freqs:
-        probabilities[word] = {}
-        for i in range(0, number_of_clusters):
-            probabilities[word][i] = 0
-            for t in clusters_of_articles[i+1]:
-                current_doc = articles_with_their_freq[t]
-                if word in current_doc:
-                    probabilities[word][i] = 1
-                    break
-    for word in relevant_words_with_freqs:
-        count_of_0 = 0
-        for i in range(0, number_of_clusters):
-            if probabilities[word][i] == 0:
-                count_of_0 += 1
-        for i in range(0, number_of_clusters):
-            if probabilities[word][i] == 0:
-                probabilities[word][i] = calc_lidstone_for_unigram(count_of_0, number_of_clusters, voc_size, lambda_val)
-            else:
-                probabilities[word][i] = calc_lidstone_for_unigram(number_of_clusters-count_of_0, number_of_clusters, voc_size, lambda_val)
+    weights = {}
+    # Initialize the weights by the initial clusters - if the doc in the cluster - set the weight to 1, else - set to 0
+    for i, doc_list in clusters_of_articles.iteritems():
+        for t in doc_list:
+            weights[t] = {}
+            weights[t][i-1] = 1
+            for m in range(0, number_of_clusters):
+                if m not in weights[t]:
+                    weights[t][m] = 0
+
+    # Initialize the alpha and probs like in m step
+    alpha, probabilities = m_step(weights, articles_with_their_freq, relevant_words_with_freqs, number_of_clusters, lambda_val, voc_size)
     return alpha, probabilities
 
 
-def calc_perplexity(lan_likelihood, voc_size ):
-    return math.pow(2, (-1/voc_size * lan_likelihood))
+# Calculate perplexity by the given formula of th exercise
+def calc_perplexity(lan_likelihood, number_of_words):
+    return math.pow(2, (-1 / number_of_words * lan_likelihood))
 
 
 def em_process(articles_with_their_words_freqs, all_words_with_all_freq, words_clusters, number_of_clusters):
     k_param = 10
     lambda_val = 1.1
+    em_threshold = 10
     v_size = len(all_words_with_all_freq)
+    # First we will initialize the Pik and Alpha_i for the model
     alpha, probabilities = calc_initial_alpha_and_prob(all_words_with_all_freq, articles_with_their_words_freqs,
                                                        words_clusters, number_of_clusters, v_size,
                                                        lambda_val)
+
     likelihood_array = []
     perplexity_array = []
-    prev_likelihood = -10000001
+    # Initial value for the algorithm to continue running
+    prev_likelihood = -10000101
     curr_likelihood = -10000000
     epoch = 0
-    while curr_likelihood >= prev_likelihood:
+    number_of_words = sum(all_words_with_all_freq.values())
+    # The em will continue running until the current calculated likelihood is smaller from the previous calculated
+    # likelihood
+    while curr_likelihood - prev_likelihood > em_threshold:
+        # In the e-step the algorithm calculates the weights of each document to be in a cluster
+        # And returns them and the list of z and m (for the likelihood)
         w, z_list, m_list = e_step(all_words_with_all_freq, articles_with_their_words_freqs, alpha, probabilities,
                                    number_of_clusters, k_param)
+        # In the m-step the algorithm calculates the alphas and probs according to the givem weight values
         alpha, probabilities = m_step(w, articles_with_their_words_freqs, all_words_with_all_freq, number_of_clusters,
-                                      lambda_val, v_size, words_clusters)
+                                      lambda_val, v_size)
         prev_likelihood = curr_likelihood
+        # Calc the lan likelihood of the model
         curr_likelihood = calc_likelihood(m_list, z_list, k_param)
-        curr_perplexity = calc_perplexity(curr_likelihood, v_size)
-        #print "likelihood per curr epoch (", epoch, ") - ", curr_likelihood
+        # Calc the model's perplexity
+        curr_perplexity = calc_perplexity(curr_likelihood, number_of_words)
+
         likelihood_array.append(curr_likelihood)
         perplexity_array.append(curr_perplexity)
         epoch += 1
+
+    # Create the graphs of the likelihood and perplexity per epoch
     plot_graph(epoch, likelihood_array, "likelihood")
     plot_graph(epoch, perplexity_array, "perplexity")
+
+    # Return the final weights
     return w
 
 
 def plot_graph(num_of_iterations, axis_y, label_name):
     axis_x = [i for i in range(0, num_of_iterations)]  # number of iterations
-    plt.plot(axis_x, axis_y)
+    plt.plot(axis_x, axis_y, label=label_name)
     plt.xlabel("iterations")
     plt.ylabel(label_name)
     plt.title("I vs L Graph")
@@ -180,12 +178,13 @@ def plot_graph(num_of_iterations, axis_y, label_name):
 
 
 def e_step(all_relevant_words, articles_with_their_words_freqs, alpha, probabilities, number_of_clusters, k_param):
-    #print ('e_step')
     w = {}
     z_list = []
     m_list = []
+    # For every document in our training set we want to calculate it's possibility to be in the clusters
     for t, doc_with_freq in articles_with_their_words_freqs.iteritems():
         w[t] = {}
+        # Calculate the z array (for every cluster there is it's own value of z) for the current doc
         curr_z, max_zi = calc_z_values(all_relevant_words, number_of_clusters, alpha, probabilities, doc_with_freq, k_param)
         sum_zi = 0
         for i in range(0, number_of_clusters):
@@ -202,6 +201,7 @@ def e_step(all_relevant_words, articles_with_their_words_freqs, alpha, probabili
     return w, z_list, m_list
 
 
+# Calculate the z array for a current doc by the equation
 def calc_z_values(all_relevant_words, number_of_clusters, alpha, probabilities, curr_article_with_t, k_param):
     z = []
     for i in range(0, number_of_clusters):
@@ -213,12 +213,14 @@ def calc_z_values(all_relevant_words, number_of_clusters, alpha, probabilities, 
     return z, max_z
 
 
-def m_step(weights, articles_with_their_words_frequencies, relevant_words_with_freq, number_of_clusters, lambda_val, v_size, document_clusters):
+def m_step(weights, articles_with_their_words_frequencies, relevant_words_with_freq, number_of_clusters, lambda_val, v_size):
     #print('m_step')
     threshold = 0.000001
     number_of_docs = len(articles_with_their_words_frequencies)
     probabilities = {}
     denominator = []
+    # For every cluster we want to calculate the new probs for words to be in the clusters
+    # The calculation is by the wti (the probability of the doc to be in the cluster)
     for i in range(0, number_of_clusters):
         denom_i = 0
         for t in articles_with_their_words_frequencies:
@@ -233,6 +235,7 @@ def m_step(weights, articles_with_their_words_frequencies, relevant_words_with_f
                 if word in articles_with_their_words_frequencies[t] and weights[t][i] != 0:
                     numerator += weights[t][i] * articles_with_their_words_frequencies[t][word]
             probabilities[word][i] = calc_lidstone_for_unigram(numerator, denominator[i], v_size, lambda_val)
+
     # If alpha is smaller then a threshold we will scale it to the threshold to not get ln(alpha) = error
 
     alpha = [0] * number_of_clusters
@@ -250,23 +253,9 @@ def m_step(weights, articles_with_their_words_frequencies, relevant_words_with_f
     return alpha, probabilities
 
 
-def calc_weights(k_param, z_values):
-    m = max(z_values)
-    weights = []
-    sum_e_z = 0
-    for j in range(0, len(z_values)):
-        if z_values[j] - m >= (-1.0) * k_param:
-            sum_e_z += math.exp(z_values[j] - m)
-    for i in range(0, len(z_values)):
-        if z_values[i] - m < (-1.0) * k_param:
-            weights.append(0)
-        else:
-            weights.append(math.exp(z_values[i] - m) / sum_e_z)
-    return weights
-
-
 # -------------------------------------------------- EM - ALG -------------------------------------------------- #
 
+# As suggested in the assignment we removed words that appeared in the training data less or equal to 3 times
 def clean_rare_words_train_data(all_relevant_words, articles_train_data):
     new_articles_train_data = {}
     for article_id, content in articles_train_data.iteritems():
@@ -302,6 +291,7 @@ def create_train_data(train_file):
                     else:
                         all_words_with_counter[word] += 1
 
+    # We want to use only words that appeared more then 3 times
     relevant_words_with_freqs = clean_rare_words(all_words_with_counter)
     relevant_articles_train_data = clean_rare_words_train_data(relevant_words_with_freqs, articles_train_data)
     article_train_data_with_freq = get_words_freq_for_article(relevant_articles_train_data)
@@ -316,6 +306,8 @@ def get_words_freq_for_article(articles_train_data):
     return article_train_data_with_freq
 
 
+# The splitting is done by a simple method - we iterate through all the articles and set the article to the cluster by
+# the doc index, the cluster number is doc_index%9 (9 - number of the clusters)
 def split_into_clusters(dev_set):
     dev_split_into_clusters = {}
     for i in range(0, len(dev_set)):
@@ -336,6 +328,7 @@ def get_topics(topics_file):
     return topics
 
 
+# Calculate the accuracy of the model
 def calc_accuracy(articles_headers, all_doc_with_classification):
     accuracy = 0
     for doc in all_doc_with_classification:
@@ -346,6 +339,7 @@ def calc_accuracy(articles_headers, all_doc_with_classification):
     return accuracy / total_articles
 
 
+# Will be helpful in smoothing
 def calc_lidstone_for_unigram(word_occs, train_size, voc_size, lambda_value):
     # C(X)+ LAMBDA / |S| + LAMBDA*|X|
     lidstone = (word_occs + lambda_value) / (train_size + lambda_value * voc_size)
@@ -398,5 +392,5 @@ def split_data_to_train_and_validate(train_fraction, all_words, article_indices)
 # -------------------------------------------------- HELP FUNCTIONS -------------------------------------------------- #
 
 if __name__ == "__main__":
-    # main(sys.argv)
-    main("develop.txt", "topics.txt")
+     main(sys.argv)
+    #main("develop.txt", "topics.txt")

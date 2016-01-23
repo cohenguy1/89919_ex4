@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.util.*;
 
 import InputOutput.DataClass;
@@ -10,6 +11,8 @@ public class EMAlgorithm
 
 	double clustersProb[];
 	long numberOfRelevantWords; //This is the new vocabulary size
+	
+	long relevantWordsCount;
 	List<Document> docsList; 
 	List<Set<Topics>> docsTopicList;
 
@@ -37,16 +40,20 @@ public class EMAlgorithm
 		docsList = devData.getDocsList(); 
 		numberOfRelevantWords = devData.WordsMap.size();
 		docsTopicList = devData.getDocsTopicList();
-
+		 
+		CountRelevantWordsCount(devData.WordsMap);
+		System.out.println("Relevant words " + relevantWordsCount);
+		
 		InitialEStep(devData.WordsMap, clusters, devData.getDocsList().size());
 		calcMStep(devData,clusters);
 		
 		double lastLikelihood = -999999999;
-		double likelihood = Double.NEGATIVE_INFINITY+2*stopThreshold;
+		double likelihood = -999999999+2*stopThreshold;
 		List<Double> likelihoodList = new ArrayList<Double>();
 		double perplexity = 0;
 		List<Double> perplexityList = new ArrayList<Double>();
-
+		int iteration = 0;
+		
 		while (likelihood- lastLikelihood > stopThreshold ){
 			calcEStep(devData,clusters);
 
@@ -60,20 +67,54 @@ public class EMAlgorithm
 			perplexity = calcPerplexity(likelihood);
 			perplexityList.add(perplexity);
 			System.out.println("Perplexity- " + perplexity);
+			
+			iteration++;
+			System.out.println("iteration " + iteration);
 		}
 
 		System.out.println("All Likelihood- " + likelihoodList);
 		System.out.println("All Perplexity- " + perplexityList);
 
-		Integer[][] confusionMatrix = calcConfusionMatrix();
+		Map<Integer,List<Document>> docsInCluster = new TreeMap<Integer,List<Document>>();
+		List<Topics> mainClusterTopic = new ArrayList<Topics>();
+		Integer[][] confusionMatrix = calcConfusionMatrix(docsInCluster, mainClusterTopic);
 
-
+		ClassifyDocs(docsInCluster, mainClusterTopic);
+		
+		double accuracy = CalcAccuracy(docsInCluster);
+		System.out.println("accuracy- " + accuracy);
+		try {
+			System.in.read();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
-	private Integer[][] calcConfusionMatrix() {
-
-		Map<Integer,List<Document>> docsInCluster = new TreeMap<Integer,List<Document>>();
-
+	private void ClassifyDocs(Map<Integer,List<Document>> docsInCluster, List<Topics> mainClusterTopic)	{
+		// Iterate over each document in each cluster
+		for (Integer clusterIndex : docsInCluster.keySet())	{
+			for (Document doc : docsInCluster.get(clusterIndex)) {
+				doc.Classify(mainClusterTopic.get(clusterIndex));
+			}
+		}
+	}
+	
+	private double CalcAccuracy(Map<Integer,List<Document>> docsInCluster) {
+		double correctClassifications = 0;
+		for (Integer clusterIndex : docsInCluster.keySet())	{
+			for (Document doc : docsInCluster.get(clusterIndex)) {
+				if (doc.getTopics().contains(doc.getClassification()))
+				{
+					correctClassifications++;
+				}
+			}
+		}
+		
+		return correctClassifications/docsList.size();
+	}
+	
+	private Integer[][] calcConfusionMatrix(Map<Integer,List<Document>> docsInCluster, List<Topics> mainClusterTopic) {
 		//Find Cluster of each document
 		int maxCluster;
 		for (Document doc : docsList){
@@ -111,7 +152,6 @@ public class EMAlgorithm
 		}
 
 		//Find main topic in each cluster
-		List<Topics> mainClusterTopic = new ArrayList<Topics>();
 		for (int i=0; i<NumOfClusters; i++){
 			int j=0;
 			Topics mainTopic = null;
@@ -184,7 +224,7 @@ public class EMAlgorithm
 	}
 
 	private double calcPerplexity(double likelihood) {
-		return Math.pow(2, -1/numberOfRelevantWords * likelihood); //TODO: check if right. or do we need mean perplexity?
+		return Math.pow(2, -1.0/relevantWordsCount * likelihood); //TODO: check if right. or do we need mean perplexity?
 	}
 
 	private double calcLikelihood() {
@@ -224,6 +264,16 @@ public class EMAlgorithm
 		//	    return likelihood
 	}
 
+	private void CountRelevantWordsCount(Map<String, Integer> wordsMap)
+	{
+		relevantWordsCount = 0;
+		
+		for (Integer wordCount : wordsMap.values())
+		{
+			relevantWordsCount += wordCount;
+		}
+	}
+	
 	private void calcEStep(DataClass devData, List<Cluster> clusters) {
 		//		int count=0;
 		for (Document doc : docsList ){
@@ -319,6 +369,7 @@ public class EMAlgorithm
 		Double[] pLidstone;
 
 		for (int i = 0; i < NumOfClusters; i++) {
+			sumWti = 0;
 			for (Document doc : docsList) {
 				if (Wti.get(doc) == null){
 					System.out.println("print");

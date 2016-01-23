@@ -11,6 +11,8 @@ public class Document implements Comparable<Document>
 	public Map<String, Integer> WordsMap;
 
 	Set<Topics> topics;
+	
+	private Topics classification;
 
 	public Document(String[] docContent, int docId, Set<Topics> topics)
 	{
@@ -68,5 +70,13 @@ public class Document implements Comparable<Document>
 	@Override
 	public int compareTo(Document oDoc) {
 		return id-oDoc.id;
+	}
+
+	public void Classify(Topics topic) {
+		classification = topic;
+	}
+	
+	public Topics getClassification() {
+		return classification;
 	}
 }

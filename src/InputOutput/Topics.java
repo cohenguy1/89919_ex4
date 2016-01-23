@@ -22,6 +22,32 @@ public enum Topics {
 		return this.text;
 	}
 	
+	public static Topics fromNumber(int index) {
+		switch (index) 
+		{
+		case 0:
+			return Topics.ACQ;
+		case 1:
+			return Topics.MONEY_FX;
+		case 2:
+			return Topics.GRAIN;
+		case 3:
+			return Topics.CRUDE;
+		case 4:
+			return Topics.TRADE;
+		case 5:
+			return Topics.INTEREST;
+		case 6:
+			return Topics.SHIP;
+		case 7:
+			return Topics.WHEAT;
+		case 8:
+			return Topics.CORN;
+		default:
+			return Topics.ACQ;	
+		}
+	}
+	
 	public static int getNumberOfTopcis() {
 		return 9; //Change if topic is added!
 	}

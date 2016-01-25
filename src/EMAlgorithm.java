@@ -23,7 +23,7 @@ public class EMAlgorithm
 	Map<String, Double[]> Pik = new TreeMap<String, Double[]>();
 
 	//ASUMING:
-	private double lidstonLambda = 1.1;
+	private double lidstonLambda = 1;
 	private double paramK = 10;
 	private double threshold = 0.000001;
 	private double stopThreshold = 10;
@@ -79,6 +79,15 @@ public class EMAlgorithm
 		List<Topics> mainClusterTopic = new ArrayList<Topics>();
 		Integer[][] confusionMatrix = calcConfusionMatrix(docsInCluster, mainClusterTopic);
 
+		System.out.println("Confusion Matrix:");
+		System.out.println("==========================");
+		for (int i=0; i<NumOfClusters; i++){
+			for(int j=0; j <= Topics.values().length; j++) {
+				System.out.print(confusionMatrix[i][j] + " ");
+			}
+			System.out.println();
+		}
+		
 		ClassifyDocs(docsInCluster, mainClusterTopic);
 		
 		double accuracy = CalcAccuracy(docsInCluster);

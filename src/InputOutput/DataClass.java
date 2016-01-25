@@ -1,4 +1,5 @@
 /* Ido Cohen	Guy Cohen	203516992	304840283 */
+/* Ido Cohen	Guy Cohen	203516992	304840283 */
 package InputOutput;
 
 import java.io.BufferedReader;
@@ -119,7 +120,7 @@ public class DataClass
 	 */
 	private void mapWordCount(Document doc) 
 	{	
-		for(String word : doc.words) //TODO: check if need to use doc.words or doc.WordsMap.keySet() - only the relevant words
+		for(String word : doc.words)
 		{
 			AddWordToMap(WordsMap, word);
 			

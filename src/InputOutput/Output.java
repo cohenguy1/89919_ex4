@@ -10,7 +10,6 @@ public class Output {
 	
 	public static boolean writeToConsole = false;
 
-	//TODO: delete path!
 	public static String folderPath = "";
 
 	public int countOutput = 1;

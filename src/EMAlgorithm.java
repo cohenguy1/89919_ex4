@@ -1,3 +1,4 @@
+/* Ido Cohen	Guy Cohen	203516992	304840283 */
 import java.io.IOException;
 import java.util.*;
 
@@ -11,7 +12,7 @@ public class EMAlgorithm
 
 	double clustersProb[];
 	long numberOfRelevantWords; //This is the new vocabulary size
-	
+
 	long relevantWordsCount;
 	List<Document> docsList; 
 	List<Set<Topics>> docsTopicList;
@@ -40,20 +41,20 @@ public class EMAlgorithm
 		docsList = devData.getDocsList(); 
 		numberOfRelevantWords = devData.WordsMap.size();
 		docsTopicList = devData.getDocsTopicList();
-		 
+
 		CountRelevantWordsCount(devData.WordsMap);
 		System.out.println("Relevant words " + relevantWordsCount);
-		
+
 		InitialEStep(devData.WordsMap, clusters, devData.getDocsList().size());
 		calcMStep(devData,clusters);
-		
+
 		double lastLikelihood = -999999999;
 		double likelihood = -999999999+2*stopThreshold;
 		List<Double> likelihoodList = new ArrayList<Double>();
 		double perplexity = 0;
 		List<Double> perplexityList = new ArrayList<Double>();
 		int iteration = 0;
-		
+
 		while (likelihood- lastLikelihood > stopThreshold ){
 			calcEStep(devData,clusters);
 
@@ -67,7 +68,7 @@ public class EMAlgorithm
 			perplexity = calcPerplexity(likelihood);
 			perplexityList.add(perplexity);
 			System.out.println("Perplexity- " + perplexity);
-			
+
 			iteration++;
 			System.out.println("iteration " + iteration);
 		}
@@ -87,15 +88,14 @@ public class EMAlgorithm
 			}
 			System.out.println();
 		}
-		
+
 		ClassifyDocs(docsInCluster, mainClusterTopic);
-		
+
 		double accuracy = CalcAccuracy(docsInCluster);
 		System.out.println("accuracy- " + accuracy);
 		try {
 			System.in.read();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -108,7 +108,7 @@ public class EMAlgorithm
 			}
 		}
 	}
-	
+
 	private double CalcAccuracy(Map<Integer,List<Document>> docsInCluster) {
 		double correctClassifications = 0;
 		for (Integer clusterIndex : docsInCluster.keySet())	{
@@ -119,10 +119,10 @@ public class EMAlgorithm
 				}
 			}
 		}
-		
+
 		return correctClassifications/docsList.size();
 	}
-	
+
 	private Integer[][] calcConfusionMatrix(Map<Integer,List<Document>> docsInCluster, List<Topics> mainClusterTopic) {
 		//Find Cluster of each document
 		int maxCluster;
@@ -178,62 +178,10 @@ public class EMAlgorithm
 		System.out.println("Main Topics- " + mainClusterTopic);
 
 		return confustionMatrix;
-
-		//		clusters_with_topics = {}
-		//	    for row in range(0, number_of_clusters):
-		//	        dominant_topic = 0
-		//	        dominant_topic_val = 0
-		//	        for col in range(0, number_of_topics):
-		//	            if conf_matrix[row][col] > dominant_topic_val:
-		//	                dominant_topic = topics_list[col]
-		//	                dominant_topic_val = conf_matrix[row][col]
-		//	        clusters_with_topics[row] = dominant_topic
-
-
-		//	    documents_in_clusters = {}
-		//
-		//	    number_of_topics = len(topics_list)
-		//	    number_of_clusters = len(weights[0].keys())
-		//
-		//	    # Set each cluster with it's corresponding cluster by wti
-		//	    for t in articles_with_their_words_freqs:
-		//	        max_weights = weights[t][0]
-		//	        selected_index = 0
-		//	        for i in range(0, number_of_clusters):
-		//	            if weights[t][i] > max_weights:
-		//	                max_weights = weights[t][i]
-		//	                selected_index = i
-		//	        if selected_index not in documents_in_clusters:
-		//	            documents_in_clusters[selected_index] = []
-		//	        documents_in_clusters[selected_index].append(t)
-		//
-		//	    #Create the confusion matrix
-		//	    conf_matrix = np.zeros((number_of_clusters, number_of_topics + 1))
-		//	    for row in range(0, number_of_clusters):
-		//	        for col in range(0, number_of_topics):
-		//	            current_topic = topics_list[col]
-		//	            for t in documents_in_clusters[row]:
-		//	                if current_topic in article_topics[t]:
-		//	                    conf_matrix[row][col] += 1
-		//	        # Number of articles in the cluster
-		//	        conf_matrix[row][number_of_topics] = len(documents_in_clusters[row])
-		//
-		//	    clusters_with_topics = {}
-		//	    for row in range(0, number_of_clusters):
-		//	        dominant_topic = 0
-		//	        dominant_topic_val = 0
-		//	        for col in range(0, number_of_topics):
-		//	            if conf_matrix[row][col] > dominant_topic_val:
-		//	                dominant_topic = topics_list[col]
-		//	                dominant_topic_val = conf_matrix[row][col]
-		//	        clusters_with_topics[row] = dominant_topic
-		//
-		//	    return conf_matrix, clusters_with_topics, documents_in_clusters
-
 	}
 
 	private double calcPerplexity(double likelihood) {
-		return Math.pow(2, -1.0/relevantWordsCount * likelihood); //TODO: check if right. or do we need mean perplexity?
+		return Math.pow(2, -1.0/relevantWordsCount * likelihood);
 	}
 
 	private double calcLikelihood() {
@@ -252,39 +200,24 @@ public class EMAlgorithm
 					}
 				}
 			}
-			if (sumZt==0){
-				System.out.println("DEBUG- sumZt is zero"); //TODO: delete
-			}
+
 			likelihood += maxZt + Math.log(sumZt);			
 		}
 
 		return likelihood;
-
-		//		len_of_m_list = len(m_list)
-		//	    likelihood = 0
-		//	    for t in range(len_of_m_list):
-		//	        sum_zi_e = 0
-		//	        curr_zi_len = len(z_list[t])
-		//	        for i in range(0, curr_zi_len):
-		//	            curr_zi_m = z_list[t][i] - m_list[t]
-		//	            if curr_zi_m >= (-1.0) * k_param:
-		//	                sum_zi_e += math.exp(curr_zi_m)
-		//	        likelihood += m_list[t] + np.log(sum_zi_e)
-		//	    return likelihood
 	}
 
 	private void CountRelevantWordsCount(Map<String, Integer> wordsMap)
 	{
 		relevantWordsCount = 0;
-		
+
 		for (Integer wordCount : wordsMap.values())
 		{
 			relevantWordsCount += wordCount;
 		}
 	}
-	
+
 	private void calcEStep(DataClass devData, List<Cluster> clusters) {
-		//		int count=0;
 		for (Document doc : docsList ){
 			//			count++;
 			Double[] Zi = calcZti(devData.WordsMap,doc); 
@@ -314,24 +247,6 @@ public class EMAlgorithm
 
 			Wti.put(doc, clusterProbForDoc);
 		}
-
-		//	    for t, doc_with_freq in articles_with_their_words_freqs.iteritems():
-		//	        w[t] = {}
-		//	        curr_z, max_zi = calc_z_values(all_relevant_words, number_of_clusters, alpha, probabilities, doc_with_freq, k_param)
-		//	        sum_zi = 0
-		//	        for i in range(0, number_of_clusters):
-		//	            if curr_z[i] - max_zi < (-1.0) * k_param:
-		//	                w[t][i] = 0
-		//	            else:
-		//	                w[t][i] = math.exp(curr_z[i] - max_zi)
-		//	                sum_zi += w[t][i]
-		//	        for i in range(0, number_of_clusters):
-		//	            w[t][i] /= sum_zi
-		//
-		//	        z_list.append(curr_z)
-		//	        m_list.append(max_zi)
-		//	    return w, z_list, m_list
-
 	}
 
 	private double getMaxZ(Double[] Zi) {
@@ -358,16 +273,6 @@ public class EMAlgorithm
 		}		
 
 		return Zt;
-
-		//		z = []
-		//	    for i in range(0, number_of_clusters):
-		//	        sum_of_freq_ln = 0
-		//	        for word in curr_article_with_t:
-		//	            sum_of_freq_ln += curr_article_with_t[word] * np.log(probabilities[word][i])
-		//	        z.append(np.log(alpha[i]) + sum_of_freq_ln)
-		//	    max_z = max(z)
-		//	    return z, max_z
-
 	}
 
 	private void calcMStep (DataClass devData, List<Cluster> clusters) {
@@ -430,41 +335,6 @@ public class EMAlgorithm
 		for (int i = 0; i < NumOfClusters; i++) {
 			clustersProb[i] /= alphaSum;
 		}
-
-		//		threshold = 0.000001
-		//			    number_of_docs = len(articles_with_their_words_frequencies)
-		//			    probabilities = {}
-		//			    denominator = []
-		//			    for i in range(0, number_of_clusters):
-		//			        denom_i = 0
-		//			        for t in articles_with_their_words_frequencies:
-		//			            len_of_t = sum(articles_with_their_words_frequencies[t].values())
-		//			            denom_i += weights[t][i] * len_of_t
-		//			        denominator.append(denom_i)
-		//			    for word in relevant_words_with_freq:
-		//			        probabilities[word] = {}
-		//			        for i in range(0, number_of_clusters):
-		//			            numerator = 0
-		//			            for t in articles_with_their_words_frequencies:
-		//			                if word in articles_with_their_words_frequencies[t] and weights[t][i] != 0:
-		//			                    numerator += weights[t][i] * articles_with_their_words_frequencies[t][word]
-		//			            probabilities[word][i] = calc_lidstone_for_unigram(numerator, denominator[i], v_size, lambda_val)
-		//			    # If alpha is smaller then a threshold we will scale it to the threshold to not get ln(alpha) = error
-		//
-		//			    alpha = [0] * number_of_clusters
-		//			    for i in range(0, number_of_clusters):
-		//			        for t in articles_with_their_words_frequencies:
-		//			            alpha[i] += weights[t][i]
-		//			        alpha[i] /= number_of_docs
-		//			    # alpha = [sum(i) / number_of_docs for i in zip(*weights)]
-		//			    for i in range(0, len(alpha)):
-		//			        if alpha[i] < threshold:
-		//			            alpha[i] = threshold
-		//			    sum_of_alpha = sum(alpha)
-		//			    # Normalize alpha for it to sum to 1
-		//			    alpha = [x / sum_of_alpha for x in alpha]
-		//			    return alpha, probabilities
-
 	}
 
 	/**
@@ -484,164 +354,11 @@ public class EMAlgorithm
 				Wti.put(doc, clusterProbForDoc);
 			}
 		}
-
-		//		//Init Ai
-		//		InitialClustersProb(clusters, numberOfDocs);
-		//
-		//		//Init Pik
-		//		for (String word : wordsMap.keySet())
-		//		{			
-		//			boolean[] isWordInCluster = isWordInClusters(clusters,word);
-		//
-		//			//for every doc t - has a list of probabilities (for each cluster i))
-		//			Pik.put(word, InitialPikWithLidstone(isWordInCluster));
-		//		}
-
 	}
-
-//	/**
-//	 * Check for each cluster if the word occurs in it
-//	 * @param clusters
-//	 * @param word
-//	 * @return
-//	 */
-//	private boolean[] isWordInClusters(List<Cluster> clusters, String word) {
-//		boolean[] isWordInCluster = new boolean[NumOfClusters];
-//		for (int i = 0; i < NumOfClusters; i++)
-//		{				
-//			isWordInCluster[i] = clusters.get(i).hasWord(word); 
-//		}
-//
-//		return isWordInCluster;
-//	}
-
-//	/**
-//	 * Smooth Pik with lidstone - using the number of clusturs the word occurs in
-//	 * ASUMING: we can pick any way to initialize them, and this works.
-//	 * @param isWordInCluster
-//	 * @return
-//	 */
-//	private Double[] InitialPikWithLidstone(boolean[] isWordInCluster) {		
-//		Double[] clusterProbForDoc = new Double[NumOfClusters];
-//
-//		//count in how many clusters the word oocurs
-//		int numberOfClustersWithWord=0;
-//		for (boolean isInCluster : isWordInCluster){
-//			if (isInCluster){
-//				numberOfClustersWithWord++;
-//			}		
-//		}
-//
-//		for (int i = 0; i < NumOfClusters; i++)
-//		{		
-//			if(isWordInCluster[i]){
-//				clusterProbForDoc[i] = CalcUnigramPLidstone(numberOfClustersWithWord , NumOfClusters);
-//			}
-//			else{
-//				clusterProbForDoc[i] = CalcUnigramPLidstone(NumOfClusters-numberOfClustersWithWord , NumOfClusters); 
-//			}
-//
-//		}
-//
-//		return clusterProbForDoc;
-//
-//	}
-
-//	public double CalcUnigramPLidstone(long totalWordordOccurences, long trainSize) {
-//		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
-//		return (totalWordordOccurences + lidstonLambda)
-//				/ (trainSize + lidstonLambda * numberOfRelevantWords);
-//	}
 
 	public double CalcUnigramPLidstone(Double totalWordordOccurences, Double trainSize) {
 		//		C(X)+ LAMBDA / |S| + LAMBDA*|X|
 		return (totalWordordOccurences + lidstonLambda)
 				/ (trainSize + lidstonLambda * numberOfRelevantWords);
 	}
-
-//	/**
-//	 * Calculates Ai (ASUMING: using initial Wti=1/NumOfClusters - uniform probability)  
-//	 * @param clusters
-//	 * @param docsListSize
-//	 */
-//	private void InitialClustersProb(List<Cluster> clusters, int docsListSize)
-//	{
-//		for (int i = 0; i < NumOfClusters; i++)
-//		{
-//			clustersProb[i] = clusters.get(i).documents.size() / (double)docsListSize;
-//		}
-//	}
-//
-//	private double GetClassificationProb(Document doc, List<Cluster> clusters, int clusterIndex)
-//	{
-//		double numerator_prob = GetProbByCluster(doc, clusters, clusterIndex);
-//		double denominator_prob = GetProbForAllClusters(doc, clusters);
-//
-//		return numerator_prob / denominator_prob;
-//	}
-//
-//	/**
-//	 * Calculate sigma(Pik^Ntk) for doc t
-//	 * @param doc
-//	 * @param clusters
-//	 * @param clusterIndex
-//	 * @return
-//	 */
-//	private double GetProbByCluster(Document doc, List<Cluster> clusters, int clusterIndex)
-//	{
-//		double prob1 = 1;
-//
-//		for (String word : doc.WordsMap.keySet())
-//		{
-//			double probForWordInCluster = GetNumOfOccursInCluster(clusterIndex, clusters, word);
-//			if (probForWordInCluster > 0)
-//			{
-//				prob1 *= Math.pow(probForWordInCluster,doc.WordsMap.get(word));
-//			}
-//		}
-//
-//		return clustersProb[clusterIndex] * prob1;
-//	}
-
-//	private double GetProbForAllClusters(Document doc, List<Cluster> clusters)
-//	{	
-//		double prob2 = 0;
-//
-//		for (int clusterIndex = 0; clusterIndex < NumOfClusters; clusterIndex++)
-//		{
-//			double prob1 = GetProbByCluster(doc, clusters, clusterIndex);
-//			prob2 = clustersProb[clusterIndex] * prob1;
-//		}
-//
-//		return prob2;
-//	}
-
-
-//	/**
-//	 * Calculate Pik for cluster i and word k
-//	 * ASUMING: using initial Wti=1/NumOfClusters - uniform probability, so they don't change Pik
-//	 * ASUMING: Pik is calculates only by the documents in the cluster. //TODO:check if right
-//	 * @param cluster
-//	 * @param word
-//	 * @return
-//	 */
-//	private double GetNumOfOccursInCluster(Cluster cluster, String word) 
-//	{
-//		int totalWordCountInClusterDocuments = 0;
-//		int wordCountInClusterDocuments = 0;
-//
-//		for (Document doc : cluster.documents)
-//		{
-//			wordCountInClusterDocuments += doc.getWordOccurrences(word);
-//			totalWordCountInClusterDocuments += doc.getNumberOfRelevantWordsInDoc();
-//		}
-//
-//		return wordCountInClusterDocuments / (double)totalWordCountInClusterDocuments;
-//	}
-
-//	private double GetNumOfOccursInCluster(int i, List<Cluster> clusters, String word) 
-//	{
-//		Cluster cluster = clusters.get(i);
-//		return GetNumOfOccursInCluster(cluster, word);
-//	}
 }

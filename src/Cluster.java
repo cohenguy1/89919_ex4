@@ -1,5 +1,5 @@
-import java.util.ArrayList;
-import java.util.List;
+/* Ido Cohen	Guy Cohen	203516992	304840283 */
+import java.util.*;
 
 import InputOutput.Document;
 

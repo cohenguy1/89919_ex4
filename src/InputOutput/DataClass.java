@@ -161,6 +161,19 @@ public class DataClass
 		return map.get(word) == null ? 0 : map.get(word);
 	}
 	
+	public long CountRelevantWordsCount()
+	{
+		long relevantWordsCount = 0;
+
+		for (Integer wordCount : WordsMap.values())
+		{
+			relevantWordsCount += wordCount;
+		}
+		
+		return relevantWordsCount;
+	}
+
+	
 	public List<Set<Topics>> getDocsTopicList() {
 		return docsTopicList;
 	}

@@ -42,7 +42,7 @@ public class EMAlgorithm
 		numberOfRelevantWords = devData.WordsMap.size();
 		docsTopicList = devData.getDocsTopicList();
 
-		CountRelevantWordsCount(devData.WordsMap);
+		relevantWordsCount = devData.CountRelevantWordsCount();
 		System.out.println("Relevant words " + relevantWordsCount);
 
 		InitialEStep(devData.WordsMap, clusters, devData.getDocsList().size());
@@ -51,6 +51,7 @@ public class EMAlgorithm
 		double lastLikelihood = -999999999;
 		double likelihood = -999999999+2*stopThreshold;
 		List<Double> likelihoodList = new ArrayList<Double>();
+		
 		double perplexity = 0;
 		List<Double> perplexityList = new ArrayList<Double>();
 		int iteration = 0;
@@ -151,7 +152,7 @@ public class EMAlgorithm
 				if (docsInCluster.get(i) != null){
 					for(Document doc : docsInCluster.get(i)){
 						if(doc.getTopics().contains(topic)){
-							confustionMatrix[i][j] += 1;
+							confustionMatrix[i][j]++;
 						}
 					}
 				}
@@ -207,19 +208,8 @@ public class EMAlgorithm
 		return likelihood;
 	}
 
-	private void CountRelevantWordsCount(Map<String, Integer> wordsMap)
-	{
-		relevantWordsCount = 0;
-
-		for (Integer wordCount : wordsMap.values())
-		{
-			relevantWordsCount += wordCount;
-		}
-	}
-
 	private void calcEStep(DataClass devData, List<Cluster> clusters) {
 		for (Document doc : docsList ){
-			//			count++;
 			Double[] Zi = calcZti(devData.WordsMap,doc); 
 			double maxZ = getMaxZ(Zi);
 			Zti.put(doc, Zi);
@@ -312,13 +302,13 @@ public class EMAlgorithm
 		}
 
 		for (int i = 0; i < NumOfClusters; i++) {
-			clustersProb[i] = 0;
+			double clusterProb = 0;
 
 			for (Document doc : docsList) {
-				clustersProb[i] += Wti.get(doc)[i];
+				clusterProb += Wti.get(doc)[i];
 			}
 
-			clustersProb[i] /= docsList.size();
+			clustersProb[i] = clusterProb / docsList.size();
 		}
 
 		for (int i = 0; i < NumOfClusters; i++) {
@@ -345,10 +335,10 @@ public class EMAlgorithm
 	 */
 	private void InitialEStep(Map<String, Integer> wordsMap, List<Cluster> clusters, int numberOfDocs) {
 
-		for (int i=0; i<NumOfClusters; i++){
+		for (int i=0; i < NumOfClusters; i++){
 			for (Document doc : clusters.get(i).getDocuments()){
 				Double[] clusterProbForDoc = new Double[NumOfClusters];
-				for(int j=0; j<NumOfClusters; j++){
+				for(int j=0; j < NumOfClusters; j++){
 					clusterProbForDoc[j] = (i==j ? 1.0 : 0.0);
 				}				
 				Wti.put(doc, clusterProbForDoc);

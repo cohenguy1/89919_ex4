@@ -49,7 +49,7 @@ public enum Topics {
 	}
 	
 	public static int getNumberOfTopcis() {
-		return 9; //Change if topic is added!
+		return 9;
 	}
 
 	public static Topics fromString(String text) {
